@@ -1,0 +1,200 @@
+{
+    "name": "AI Receptionist Call Flow",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "incoming-call",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Twilio Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-3.5-turbo",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful receptionist. The user said: {{$json.SpeechResult}}. Determine the intent: 'appointment', 'emergency', 'transfer', or 'general'. Return ONLY the intent."
+                        },
+                        {
+                            "content": "User said: {{$json.SpeechResult || 'Hello'}}"
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "AI Intent Classifier",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                500,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{$json.content}}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "appointment"
+                        },
+                        {
+                            "value2": "transfer",
+                            "output": 1
+                        },
+                        {
+                            "value2": "general",
+                            "output": 2
+                        }
+                    ]
+                }
+            },
+            "id": "3",
+            "name": "Switch Logic",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 1,
+            "position": [
+                750,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:4000/api/webhook/call-end",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "callerName",
+                            "value": "Unknown Caller"
+                        },
+                        {
+                            "name": "phoneNumber",
+                            "value": "={{$node[\"Twilio Webhook\"].json.From}}"
+                        },
+                        {
+                            "name": "intent",
+                            "value": "={{$node[\"AI Intent Classifier\"].json.content}}"
+                        },
+                        {
+                            "name": "transcript",
+                            "value": "={{$node[\"Twilio Webhook\"].json.SpeechResult}}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "completed"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "4",
+            "name": "Save to Backend",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "response_xml",
+                            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Say>Thank you. We have recorded your request.</Say></Response>"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "5",
+            "name": "Generate TwiML",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                1250,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Twilio Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Intent Classifier",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Intent Classifier": {
+            "main": [
+                [
+                    {
+                        "node": "Switch Logic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Switch Logic": {
+            "main": [
+                [
+                    {
+                        "node": "Save to Backend",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Save to Backend",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Save to Backend",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to Backend": {
+            "main": [
+                [
+                    {
+                        "node": "Generate TwiML",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

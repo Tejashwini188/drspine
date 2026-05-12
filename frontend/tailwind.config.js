@@ -1,0 +1,136 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+    content: [
+        "./app/**/*.{js,ts,jsx,tsx,mdx}",
+        "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    ],
+    theme: {
+        extend: {
+            colors: {
+                navy: {
+                    50: '#e8edf2',
+                    100: '#c8d3e0',
+                    200: '#a4b4c9',
+                    300: '#7f95b2',
+                    400: '#627d9e',
+                    500: '#4a6583',
+                    600: '#374e6a',
+                    700: '#283a52',
+                    800: '#1a2840',
+                    900: '#0d1a2d',
+                    950: '#060e1a',
+                },
+                spine: {
+                    50: '#e0f7fa',
+                    100: '#b2ebf2',
+                    200: '#80deea',
+                    300: '#4dd0e1',
+                    400: '#26c6da',
+                    500: '#00acc1',
+                    600: '#00838f',
+                    700: '#006064',
+                    800: '#004d40',
+                    900: '#001a1a',
+                },
+                accent: {
+                    teal: '#00897b',
+                    gold: '#f0a500',
+                    coral: '#e53935',
+                    lime: '#388e3c',
+                },
+                surface: {
+                    white: '#fafbfc',
+                    offwhite: '#f3f5f8',
+                    cream: '#eaeef3',
+                    muted: '#d5dce6',
+                },
+            },
+            fontFamily: {
+                heading: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
+                body: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+            },
+            fontSize: {
+                'display-xl': ['4.5rem', { lineHeight: '1.05', letterSpacing: '-0.03em' }],
+                'display': ['3.5rem', { lineHeight: '1.1', letterSpacing: '-0.025em' }],
+                'heading-1': ['2.75rem', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+                'heading-2': ['2rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+                'heading-3': ['1.5rem', { lineHeight: '1.3', letterSpacing: '-0.01em' }],
+                'body-lg': ['1.125rem', { lineHeight: '1.7' }],
+                'body': ['1rem', { lineHeight: '1.7' }],
+                'body-sm': ['0.875rem', { lineHeight: '1.6' }],
+                'caption': ['0.75rem', { lineHeight: '1.5', letterSpacing: '0.05em' }],
+            },
+            spacing: {
+                '18': '4.5rem',
+                '22': '5.5rem',
+                '30': '7.5rem',
+                '34': '8.5rem',
+                '38': '9.5rem',
+            },
+            borderRadius: {
+                '2xl': '1rem',
+                '3xl': '1.5rem',
+                '4xl': '2rem',
+            },
+            boxShadow: {
+                'glass': '0 8px 32px rgba(16, 42, 67, 0.06)',
+                'glass-lg': '0 16px 64px rgba(16, 42, 67, 0.08)',
+                'glass-xl': '0 24px 80px rgba(16, 42, 67, 0.12)',
+                'card': '0 1px 3px rgba(16, 42, 67, 0.04), 0 4px 12px rgba(16, 42, 67, 0.06)',
+                'card-hover': '0 4px 8px rgba(16, 42, 67, 0.06), 0 12px 32px rgba(16, 42, 67, 0.1)',
+                'button': '0 2px 8px rgba(0, 112, 179, 0.25)',
+                'button-hover': '0 4px 16px rgba(0, 112, 179, 0.35)',
+                'nav': '0 1px 0 rgba(16, 42, 67, 0.05)',
+            },
+            backgroundImage: {
+                'gradient-spine': 'linear-gradient(135deg, #00838f 0%, #00acc1 50%, #00897b 100%)',
+                'gradient-navy': 'linear-gradient(135deg, #0d1a2d 0%, #1a2840 50%, #283a52 100%)',
+                'gradient-hero': 'linear-gradient(180deg, #f3f5f8 0%, #e0f7fa 50%, #f3f5f8 100%)',
+                'gradient-section': 'linear-gradient(180deg, #fafbfc 0%, #f3f5f8 100%)',
+                'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
+            },
+            animation: {
+                'fade-up': 'fadeUp 0.6s ease-out forwards',
+                'fade-in': 'fadeIn 0.5s ease-out forwards',
+                'slide-in-right': 'slideInRight 0.5s ease-out forwards',
+                'slide-in-left': 'slideInLeft 0.5s ease-out forwards',
+                'scale-in': 'scaleIn 0.4s ease-out forwards',
+                'float': 'float 6s ease-in-out infinite',
+                'pulse-soft': 'pulseSoft 3s ease-in-out infinite',
+                'spin-slow': 'spin 20s linear infinite',
+                'count-up': 'countUp 2s ease-out forwards',
+            },
+            keyframes: {
+                fadeUp: {
+                    '0%': { opacity: '0', transform: 'translateY(30px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
+                },
+                fadeIn: {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
+                slideInRight: {
+                    '0%': { opacity: '0', transform: 'translateX(40px)' },
+                    '100%': { opacity: '1', transform: 'translateX(0)' },
+                },
+                slideInLeft: {
+                    '0%': { opacity: '0', transform: 'translateX(-40px)' },
+                    '100%': { opacity: '1', transform: 'translateX(0)' },
+                },
+                scaleIn: {
+                    '0%': { opacity: '0', transform: 'scale(0.9)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' },
+                },
+                float: {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                },
+                pulseSoft: {
+                    '0%, 100%': { opacity: '1' },
+                    '50%': { opacity: '0.7' },
+                },
+            },
+        },
+    },
+    plugins: [],
+}

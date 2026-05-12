@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Receptionist - Voice Mode</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #111827;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .monitor {
+            width: 300px;
+            text-align: center;
+        }
+
+        .status {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-bottom: 2rem;
+            height: 20px;
+        }
+
+        .circle-outer {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .circle-inner {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transition: all 0.3s;
+        }
+
+        /* States */
+        .listening .circle-outer {
+            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.1);
+            animation: pulse 1.5s infinite;
+        }
+
+        .listening .circle-inner {
+            background: #ef4444;
+            /* Red for recording */
+            transform: scale(1.1);
+        }
+
+        .speaking .circle-outer {
+            border: 2px solid #10b981;
+        }
+
+        .speaking .circle-inner {
+            background: #10b981;
+            animation: bounce 1s infinite;
+        }
+
+        .transcript-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            min-height: 60px;
+            font-size: 0.9rem;
+            color: #d1d5db;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="monitor">
+        <h2>AI Receptionist</h2>
+        <div class="status" id="status">Click circle to start call</div>
+
+        <div class="circle-outer" id="micBtn" onclick="toggleCall()">
+            <div class="circle-inner"></div>
+        </div>
+
+        <div class="transcript-box" id="transcript">
+            ...
+        </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const API_URL = '/api/chat-proxy'; // Use local proxy to avoid CORS
+
+        // VARS
+        let isCallActive = false;
+        let recognition;
+        let synth = window.speechSynthesis;
+
+        // INIT SPEECH RECOGNITION
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false; // Stop after one sentence to process
+            recognition.interimResults = false;
+            recognition.lang = 'en-US'; // Default, creates issue for multi-lingual but good for start
+
+            recognition.onstart = function () {
+                setStatus('Listening...', 'listening');
+            };
+
+            recognition.onresult = function (event) {
+                const text = event.results[0][0].transcript;
+                document.getElementById('transcript').innerText = "You: " + text;
+                processInput(text);
+            };
+
+            recognition.onend = function () {
+                if (isCallActive && !synth.speaking) {
+                    // unexpected end, restart? or wait for processing
+                }
+            };
+        } else {
+            alert("Voice not supported in this browser. Use Chrome.");
+        }
+
+        function toggleCall() {
+            if (!isCallActive) {
+                isCallActive = true;
+                setStatus('Call Connected. Speak now.', 'listening');
+                recognition.start();
+            } else {
+                isCallActive = false;
+                setStatus('Call Ended', '');
+                recognition.stop();
+                synth.cancel();
+            }
+        }
+
+        async function processInput(text) {
+            setStatus('Thinking...', '');
+
+            try {
+                // Send to n8n
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, userId: 'VoiceUser' })
+                });
+                const data = await res.json();
+
+                const reply = data.reply;
+                document.getElementById('transcript').innerText = "AI: " + reply;
+                speak(reply);
+
+            } catch (err) {
+                console.error(err);
+                setStatus('Error connecting to Agent', '');
+            }
+        }
+
+        function speak(text) {
+            setStatus('Speaking...', 'speaking');
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.onend = function () {
+                if (isCallActive) {
+                    setStatus('Listening...', 'listening');
+                    recognition.start(); // Listening again for turn-taking
+                }
+            };
+            synth.speak(utter);
+        }
+
+        function setStatus(text, className) {
+            document.getElementById('status').innerText = text;
+            document.body.className = className;
+        }
+    </script>
+</body>
+
+</html>

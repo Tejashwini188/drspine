@@ -1,0 +1,327 @@
+{
+    "name": "Advanced AI Voice Agent",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "voice-agent",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Incoming Voice Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                220,
+                300
+            ],
+            "notes": "Receives 'SpeechResult' from Twilio (or Test)"
+        },
+        {
+            "parameters": {
+                "model": "gpt-4-turbo",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are a smart multilingual receptionist for a clinic.\n\nYOUR GOAL: Help the user book, cancel, or check appointments.\nLANGUAGE: Detect the language of the user (e.g., Hindi, Spanish) and Reply IN THAT SAME LANGUAGE.\n\nTOOLS:\n- get_slots: Check available times.\n- book_appointment: Book a slot. REQUIRE: name, phone, time.\n- cancel_appointment: Cancel by phone number.\n\nCONTEXT:\nUser Phone: {{$node[\"Incoming Voice Webhook\"].json.From || 'Unknown'}}\nCurrent Time: {{new Date().toISOString()}}\n\nINSTRUCTIONS:\n1. If they want to book, FIRST check slots. Read out 2-3 options.\n2. Once they pick, ask for Name (if unknown).\n3. Confirm before booking.\n4. Keep responses SHORT (for voice)."
+                        },
+                        {
+                            "role": "user",
+                            "content": "User said: {{$node[\"Incoming Voice Webhook\"].json.SpeechResult}}"
+                        }
+                    ]
+                },
+                "tools": {
+                    "tool": [
+                        {
+                            "name": "get_available_slots",
+                            "description": "Fetch available appointment slots for the next 3 days.",
+                            "properties": []
+                        },
+                        {
+                            "name": "book_appointment",
+                            "description": "Book a new appointment.",
+                            "properties": [
+                                {
+                                    "name": "name",
+                                    "type": "string",
+                                    "description": "Name of the customer"
+                                },
+                                {
+                                    "name": "datetime",
+                                    "type": "string",
+                                    "description": "ISO Datetime string of the slot"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "cancel_appointment",
+                            "description": "Cancel an existing appointment.",
+                            "properties": [
+                                {
+                                    "name": "phone",
+                                    "type": "string",
+                                    "description": "Phone number of customer"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "AI Agent Router",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                500,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{$json.toolCalls ? $json.toolCalls[0].function.name : 'response'}}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "get_available_slots"
+                        },
+                        {
+                            "value2": "book_appointment",
+                            "output": 1
+                        },
+                        {
+                            "value2": "cancel_appointment",
+                            "output": 2
+                        },
+                        {
+                            "value2": "response",
+                            "output": 3
+                        }
+                    ]
+                }
+            },
+            "id": "3",
+            "name": "Tool Switch",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "http://localhost:4000/api/slots",
+                "options": {}
+            },
+            "id": "4",
+            "name": "API: Get Slots",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:4000/api/appointments/book",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "name",
+                            "value": "={{JSON.parse($node[\"AI Agent Router\"].json.toolCalls[0].function.arguments).name}}"
+                        },
+                        {
+                            "name": "phone",
+                            "value": "={{$node[\"Incoming Voice Webhook\"].json.From || '000'}}"
+                        },
+                        {
+                            "name": "datetime",
+                            "value": "={{JSON.parse($node[\"AI Agent Router\"].json.toolCalls[0].function.arguments).datetime}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "5",
+            "name": "API: Book Appt",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:4000/api/appointments/cancel",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "phone",
+                            "value": "={{$node[\"Incoming Voice Webhook\"].json.From || '000'}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "6",
+            "name": "API: Cancel Appt",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4-turbo",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are the interface back to the user.\nAction Performed: {{$json.id ? 'Success' : 'Check Data'}}\nData from API: {{$json}}\n\nGenerate a natural voice response confirming the action. Keep it short."
+                        }
+                    ]
+                }
+            },
+            "id": "7",
+            "name": "Generate Final Response",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                1350,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "xml",
+                "responseBody": "=<Response><Say>{{$json.content}}</Say></Response>"
+            },
+            "id": "8",
+            "name": "Respond to Twilio",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                1600,
+                300
+            ],
+            "webhookId": "1"
+        }
+    ],
+    "connections": {
+        "Incoming Voice Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent Router",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent Router": {
+            "main": [
+                [
+                    {
+                        "node": "Tool Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool Switch": {
+            "main": [
+                [
+                    {
+                        "node": "API: Get Slots",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "API: Book Appt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "API: Cancel Appt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Respond to Twilio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "API: Get Slots": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Final Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "API: Book Appt": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Final Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "API: Cancel Appt": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Final Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Final Response": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Twilio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
