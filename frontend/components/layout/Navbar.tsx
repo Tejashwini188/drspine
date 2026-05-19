@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Menu, X, ChevronDown, Phone, Calendar,
@@ -36,12 +37,19 @@ export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    const pathname = usePathname() ?? '/';
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    const isActive = (href: string) => {
+        if (href === '/') return pathname === '/';
+        // Exact match OR a child route (e.g. /conditions/slip-disc → activates Conditions)
+        return pathname === href || pathname.startsWith(href + '/');
+    };
 
     return (
         <>
@@ -70,7 +78,10 @@ export default function Navbar() {
                             >
                                 <a
                                     href={link.href}
-                                    className="nav-link flex items-center gap-1 px-3 py-2"
+                                    aria-current={isActive(link.href) ? 'page' : undefined}
+                                    className={`nav-link flex items-center gap-1 px-3 py-2 ${
+                                        isActive(link.href) ? 'is-active' : ''
+                                    }`}
                                 >
                                     {link.name}
                                     {link.hasDropdown && (
@@ -158,16 +169,24 @@ export default function Navbar() {
                         className="lg:hidden fixed top-[var(--nav-height)] left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-b border-navy-50 overflow-hidden"
                     >
                         <div className="container-default py-6 space-y-1">
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.name}
-                                    href={link.href}
-                                    className="block px-4 py-3 rounded-xl text-navy-700 font-medium hover:bg-spine-50 hover:text-navy-900 transition-colors"
-                                    onClick={() => setIsMobileOpen(false)}
-                                >
-                                    {link.name}
-                                </a>
-                            ))}
+                            {navLinks.map((link) => {
+                                const active = isActive(link.href);
+                                return (
+                                    <a
+                                        key={link.name}
+                                        href={link.href}
+                                        aria-current={active ? 'page' : undefined}
+                                        className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
+                                            active
+                                                ? 'bg-spine-50 text-navy-900 border-l-2 border-spine-500'
+                                                : 'text-navy-700 hover:bg-spine-50 hover:text-navy-900'
+                                        }`}
+                                        onClick={() => setIsMobileOpen(false)}
+                                    >
+                                        {link.name}
+                                    </a>
+                                );
+                            })}
                             <div className="pt-4 space-y-3">
                                 <a href="tel:+917050705070" className="btn-secondary w-full text-center">
                                     <Phone className="w-4 h-4" /> Call Now

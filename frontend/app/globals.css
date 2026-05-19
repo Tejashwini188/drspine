@@ -208,6 +208,14 @@
     @apply w-full;
   }
 
+  .nav-link.is-active {
+    @apply text-navy-900;
+  }
+
+  .nav-link.is-active::after {
+    @apply w-full;
+  }
+
   /* Floating label */
   .float-label {
     @apply absolute -top-2 left-3 px-1 text-xs font-medium text-navy-500 bg-white;
